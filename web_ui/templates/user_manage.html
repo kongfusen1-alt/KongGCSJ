@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智能人脸识别系统</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans SC',sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:230px;background:#fff;border-right:1px solid #e8ecf1;padding:0;display:flex;flex-direction:column}
+.sidebar .logo{padding:22px 24px 20px;border-bottom:1px solid #eef0f4}
+.sidebar .logo h2{font-size:15px;font-weight:700;color:#1a1a2e;letter-spacing:0.5px}
+.sidebar .logo p{font-size:11px;color:#8892a8;margin-top:3px}
+.sidebar nav{flex:1;padding:12px 10px}
+.sidebar nav a{display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:10px;color:#5a6478;text-decoration:none;font-size:14px;font-weight:500;transition:all .15s;margin-bottom:2px}
+.sidebar nav a:hover{background:#f5f6fa;color:#1a1a2e}
+.sidebar nav a.active{background:linear-gradient(90deg,rgba(58,123,213,0.08),rgba(0,201,255,0.08));color:#3a7bd5;font-weight:600}
+.sidebar .user-info{padding:16px 20px;border-top:1px solid #eef0f4;display:flex;align-items:center;justify-content:space-between}
+.sidebar .user-info span{font-size:13px;color:#5a6478}
+.sidebar .user-info a{color:#d63031;text-decoration:none;font-size:12px;font-weight:500}
+.main{flex:1;padding:28px 30px;overflow-y:auto}
+.main h1{font-size:20px;font-weight:700;margin-bottom:22px;color:#1a1a2e}
+.toolbar{display:flex;gap:12px;margin-bottom:18px}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;transition:transform .1s,opacity .2s}
+.btn-primary{background:linear-gradient(90deg,#3a7bd5,#00c9ff);color:#fff}
+.btn-danger{background:#d63031;color:#fff}
+.btn-sm{padding:6px 14px;font-size:12px}
+.btn:hover{opacity:.9}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eef0f4;box-shadow:0 1px 6px rgba(0,0,0,0.03)}
+th,td{padding:13px 16px;text-align:left;border-bottom:1px solid #f0f2f5}
+th{background:#f8f9fc;color:#5a6478;font-size:12px;font-weight:600;letter-spacing:0.5px}
+tr:hover td{background:#fafbfc}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500}
+.badge-admin{background:rgba(58,123,213,0.1);color:#3a7bd5}
+.badge-user{background:#f0f2f5;color:#5a6478}
+.actions{display:flex;gap:8px}
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border:1px solid #eef0f4;border-radius:16px;padding:28px;width:400px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.1)}
+.modal h2{font-size:16px;font-weight:700;margin-bottom:18px;color:#1a1a2e}
+.modal label{display:block;font-size:13px;color:#5a6478;margin-bottom:4px;margin-top:12px}
+.modal input,.modal select{width:100%;padding:10px 12px;border:1.5px solid #e8ecf1;border-radius:8px;background:#fafbfc;color:#1a1a2e;font-size:13px;outline:none}
+.modal input:focus,.modal select:focus{border-color:#3a7bd5}
+.modal-actions{display:flex;gap:10px;margin-top:18px;justify-content:flex-end}
+.toast{position:fixed;top:20px;right:20px;padding:14px 24px;border-radius:10px;background:#27ae60;color:#fff;font-weight:600;font-size:14px;transform:translateX(120%);transition:transform .3s ease;z-index:1000}
+.toast.show{transform:translateX(0)}
+.toast.error{background:#d63031}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar">
+<div class="logo"><h2>智能人脸</h2><p>Face Recognition</p></div>
+<nav>
+<a href="/dashboard"><span>实时监控</span></a>
+<a href="/agent"><span>AI 助手</span></a>
+<a href="/face_manage"><span>人脸管理</span></a>
+<a href="/user_manage" class="active"><span>用户管理</span></a>
+</nav>
+<div class="user-info">
+<span>{{ username }}</span>
+<a href="/logout">退出</a>
+</div>
+</aside>
+<div class="main">
+<h1>用户管理</h1>
+<div class="toolbar"><button class="btn btn-primary" onclick="showAddModal()">添加用户</button></div>
+<table>
+<thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>创建时间</th><th>操作</th></tr></thead>
+<tbody>
+{% for u in users %}
+<tr>
+<td style="color:#8892a8">{{ u.id }}</td>
+<td>{{ u.username }}</td>
+<td><span class="badge {{ 'badge-admin' if u.role=='admin' else 'badge-user' }}">{{ u.role }}</span></td>
+<td style="color:#8892a8;font-size:12px">{{ u.created_at }}</td>
+<td class="actions">
+<button class="btn btn-primary btn-sm" onclick="showEditModal({{ u.id }},'{{ u.username }}','{{ u.role }}')">编辑</button>
+<button class="btn btn-danger btn-sm" onclick="deleteUser({{ u.id }},'{{ u.username }}')">删除</button>
+</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</div>
+
+<div class="modal-overlay" id="addModal">
+<div class="modal">
+<h2>添加用户</h2>
+<label>用户名</label><input type="text" id="addUsername" placeholder="请输入用户名">
+<label>密码</label><input type="password" id="addPassword" placeholder="请输入密码">
+<label>角色</label><select id="addRole"><option value="user">user</option><option value="admin">admin</option></select>
+<div class="modal-actions"><button class="btn" style="background:#f0f2f5;color:#5a6478" onclick="closeModal('addModal')">取消</button><button class="btn btn-primary" onclick="addUser()">确认添加</button></div>
+</div>
+</div>
+
+<div class="modal-overlay" id="editModal">
+<div class="modal">
+<h2>编辑用户</h2>
+<label>用户名</label><input type="text" id="editUsername" disabled>
+<label>新密码</label><input type="password" id="editPassword" placeholder="留空则不修改">
+<label>角色</label><select id="editRole"><option value="user">user</option><option value="admin">admin</option></select>
+<div class="modal-actions"><button class="btn" style="background:#f0f2f5;color:#5a6478" onclick="closeModal('editModal')">取消</button><button class="btn btn-primary" onclick="editUser()">保存</button></div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+let editId=null;
+function showToast(m,e){const t=document.getElementById('toast');t.textContent=m;t.className='toast'+(e?' error':'');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000)}
+function showAddModal(){document.getElementById('addUsername').value='';document.getElementById('addPassword').value='';document.getElementById('addRole').value='user';document.getElementById('addModal').classList.add('show')}
+function showEditModal(id,n,r){editId=id;document.getElementById('editUsername').value=n;document.getElementById('editPassword').value='';document.getElementById('editRole').value=r;document.getElementById('editModal').classList.add('show')}
+function closeModal(id){document.getElementById(id).classList.remove('show')}
+document.querySelectorAll('.modal-overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('show')}});
+async function addUser(){const u=document.getElementById('addUsername').value.trim();const p=document.getElementById('addPassword').value;const r=document.getElementById('addRole').value;if(!u||!p){showToast('用户名和密码不能为空',true);return}try{const x=await fetch('/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p,role:r})});const d=await x.json();if(d.success){showToast('已添加');closeModal('addModal');setTimeout(()=>location.reload(),500)}else{showToast(d.error||'失败',true)}}catch(e){showToast('网络错误',true)}}
+async function editUser(){const p=document.getElementById('editPassword').value;const r=document.getElementById('editRole').value;const b={role:r};if(p)b.password=p;try{const x=await fetch('/api/users/'+editId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});const d=await x.json();if(d.success){showToast('已更新');closeModal('editModal');setTimeout(()=>location.reload(),500)}else{showToast(d.error||'失败',true)}}catch(e){showToast('网络错误',true)}}
+async function deleteUser(id,n){if(!confirm('确认删除用户「'+n+'」？'))return;try{const x=await fetch('/api/users/'+id,{method:'DELETE'});const d=await x.json();if(d.success){showToast('已删除');setTimeout(()=>location.reload(),500)}else{showToast(d.error||'删除失败',true)}}catch(e){showToast('网络错误',true)}}
+</script>
+</body>
+</html>

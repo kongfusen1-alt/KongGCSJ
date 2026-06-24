@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智能人脸识别系统</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans SC',sans-serif;background:#f0f2f5;min-height:100vh;display:flex;align-items:center;justify-content:center}
+.container{width:420px;max-width:92vw}
+.header{text-align:center;margin-bottom:32px}
+.header h1{font-size:28px;font-weight:700;color:#1a1a2e;letter-spacing:1px}
+.header p{font-size:14px;color:#8892a8;margin-top:6px}
+.card{background:#fff;border-radius:16px;padding:36px 32px 32px;box-shadow:0 2px 20px rgba(0,0,0,0.06)}
+.tabs{display:flex;gap:0;margin-bottom:28px;background:#f0f2f5;border-radius:10px;padding:3px}
+.tab{flex:1;text-align:center;padding:10px 0;border-radius:8px;font-size:14px;font-weight:600;color:#8892a8;cursor:pointer;transition:all .2s;border:none;background:transparent}
+.tab.active{background:#fff;color:#1a1a2e;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
+.form-group{margin-bottom:18px}
+.form-group label{display:block;font-size:13px;color:#5a6478;margin-bottom:5px;font-weight:500}
+.form-group input{width:100%;padding:12px 14px;border:1.5px solid #e8ecf1;border-radius:10px;background:#fafbfc;color:#1a1a2e;font-size:14px;outline:none;transition:border-color .2s,box-shadow .2s}
+.form-group input:focus{border-color:#3a7bd5;box-shadow:0 0 0 3px rgba(58,123,213,0.1)}
+.btn{width:100%;padding:13px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:transform .15s,opacity .2s;margin-top:4px;background:linear-gradient(90deg,#3a7bd5,#00c9ff);color:#fff}
+.btn:hover{transform:translateY(-1px);opacity:.92}
+.btn:active{transform:translateY(0)}
+.error{background:#fff0f0;border:1px solid #ffd4d8;color:#d63031;padding:10px 14px;border-radius:10px;margin-bottom:18px;font-size:13px;text-align:center;display:none}
+.error.show{display:block}
+.success{background:#f0fff4;border:1px solid #b2dfdb;color:#00a854;padding:10px 14px;border-radius:10px;margin-bottom:18px;font-size:13px;text-align:center;display:none}
+.success.show{display:block}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>智能人脸识别系统</h1>
+<p>Intelligent Face Recognition System</p>
+</div>
+<div class="card">
+<div class="tabs">
+<button class="tab active" id="tabLogin" onclick="switchTab('login')">登录</button>
+<button class="tab" id="tabRegister" onclick="switchTab('register')">注册</button>
+</div>
+
+<div id="loginForm">
+<div class="error" id="loginError"></div>
+<form method="POST" action="/login">
+<div class="form-group">
+<label>用户名</label>
+<input type="text" name="username" placeholder="请输入用户名" autocomplete="username" required>
+</div>
+<div class="form-group">
+<label>密码</label>
+<input type="password" name="password" placeholder="请输入密码" autocomplete="current-password" required>
+</div>
+<button type="submit" class="btn">登 录</button>
+</form>
+</div>
+
+<div id="registerForm" style="display:none">
+<div class="error" id="registerError"></div>
+<div class="success" id="registerSuccess"></div>
+<div class="form-group">
+<label>用户名</label>
+<input type="text" id="regUsername" placeholder="至少2个字符" autocomplete="username">
+</div>
+<div class="form-group">
+<label>密码</label>
+<input type="password" id="regPassword" placeholder="至少4个字符" autocomplete="new-password">
+</div>
+<div class="form-group">
+<label>确认密码</label>
+<input type="password" id="regConfirm" placeholder="再次输入密码" autocomplete="new-password">
+</div>
+<button class="btn" onclick="doRegister()">注 册</button>
+</div>
+</div>
+</div>
+
+<script>
+function switchTab(tab){
+document.getElementById('tabLogin').className='tab'+(tab==='login'?' active':'');
+document.getElementById('tabRegister').className='tab'+(tab==='register'?' active':'');
+document.getElementById('loginForm').style.display=tab==='login'?'block':'none';
+document.getElementById('registerForm').style.display=tab==='register'?'block':'none';
+document.getElementById('loginError').classList.remove('show');
+document.getElementById('registerError').classList.remove('show');
+document.getElementById('registerSuccess').classList.remove('show');
+}
+{% if error %}
+document.getElementById('loginError').textContent='{{ error }}';
+document.getElementById('loginError').classList.add('show');
+{% endif %}
+async function doRegister(){
+const u=document.getElementById('regUsername').value.trim();
+const p=document.getElementById('regPassword').value;
+const c=document.getElementById('regConfirm').value;
+const err=document.getElementById('registerError');
+const suc=document.getElementById('registerSuccess');
+err.classList.remove('show');suc.classList.remove('show');
+if(!u||!p){err.textContent='请填写用户名和密码';err.classList.add('show');return}
+if(p!==c){err.textContent='两次密码不一致';err.classList.add('show');return}
+if(p.length<4){err.textContent='密码至少4位';err.classList.add('show');return}
+try{
+const r=await fetch('/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+const d=await r.json();
+if(d.success){suc.textContent='注册成功，请切换到登录页面登录';suc.classList.add('show');document.getElementById('regUsername').value='';document.getElementById('regPassword').value='';document.getElementById('regConfirm').value=''}
+else{err.textContent=d.error||'注册失败';err.classList.add('show')}
+}catch(e){err.textContent='网络错误';err.classList.add('show')}
+}
+</script>
+</body>
+</html>

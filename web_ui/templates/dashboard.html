@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智能人脸识别系统</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans SC',sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:230px;background:#fff;border-right:1px solid #e8ecf1;padding:0;display:flex;flex-direction:column;box-shadow:1px 0 8px rgba(0,0,0,0.02)}
+.sidebar .logo{padding:22px 24px 20px;border-bottom:1px solid #eef0f4}
+.sidebar .logo h2{font-size:15px;font-weight:700;color:#1a1a2e;letter-spacing:0.5px}
+.sidebar .logo p{font-size:11px;color:#8892a8;margin-top:3px}
+.sidebar nav{flex:1;padding:12px 10px}
+.sidebar nav a{display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:10px;color:#5a6478;text-decoration:none;font-size:14px;font-weight:500;transition:all .15s;margin-bottom:2px}
+.sidebar nav a:hover{background:#f5f6fa;color:#1a1a2e}
+.sidebar nav a.active{background:linear-gradient(90deg,rgba(58,123,213,0.08),rgba(0,201,255,0.08));color:#3a7bd5;font-weight:600}
+.sidebar .user-info{padding:16px 20px;border-top:1px solid #eef0f4;display:flex;align-items:center;justify-content:space-between}
+.sidebar .user-info span{font-size:13px;color:#5a6478}
+.sidebar .user-info a{color:#d63031;text-decoration:none;font-size:12px;font-weight:500}
+.sidebar .user-info a:hover{text-decoration:underline}
+.main{flex:1;padding:28px 30px;overflow-y:auto}
+.main h1{font-size:20px;font-weight:700;margin-bottom:22px;color:#1a1a2e}
+.grid{display:grid;grid-template-columns:1fr 330px;gap:22px}
+.video-section{background:#fff;border-radius:14px;padding:14px;border:1px solid #eef0f4;box-shadow:0 1px 6px rgba(0,0,0,0.03)}
+.video-wrapper{position:relative;width:100%;aspect-ratio:16/9;background:#0a0a12;border-radius:10px;overflow:hidden}
+.video-wrapper img{width:100%;height:100%;object-fit:contain}
+.right-col{display:flex;flex-direction:column;gap:18px}
+.panel{background:#fff;border-radius:14px;padding:20px;border:1px solid #eef0f4;box-shadow:0 1px 6px rgba(0,0,0,0.03)}
+.panel h3{font-size:12px;font-weight:600;color:#8892a8;margin-bottom:14px;letter-spacing:0.8px;text-transform:uppercase}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat-card{background:#f8f9fc;border-radius:10px;padding:16px;text-align:center}
+.stat-card .num{font-size:24px;font-weight:700;color:#3a7bd5}
+.stat-card .label{font-size:12px;color:#8892a8;margin-top:4px}
+.face-list{list-style:none;max-height:220px;overflow-y:auto}
+.face-list li{display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f8f9fc;border-radius:8px;margin-bottom:5px;font-size:13px;color:#1a1a2e}
+.face-list li .dot{width:7px;height:7px;border-radius:50%;background:#27ae60;flex-shrink:0}
+.add-form{display:flex;gap:10px;margin-top:12px}
+.add-form input{flex:1;padding:10px 12px;border:1.5px solid #e8ecf1;border-radius:8px;background:#fafbfc;color:#1a1a2e;font-size:13px;outline:none;transition:border-color .2s}
+.add-form input:focus{border-color:#3a7bd5}
+.add-form button{padding:10px 18px;background:linear-gradient(90deg,#3a7bd5,#00c9ff);border:none;border-radius:8px;color:#fff;font-weight:600;cursor:pointer;font-size:13px;transition:transform .15s,opacity .2s}
+.add-form button:hover{opacity:.9}
+.add-form button:disabled{opacity:.5;cursor:not-allowed}
+.toast{position:fixed;top:20px;right:20px;padding:14px 24px;border-radius:10px;background:#27ae60;color:#fff;font-weight:600;font-size:14px;transform:translateX(120%);transition:transform .3s ease;z-index:1000;box-shadow:0 4px 16px rgba(0,0,0,0.1)}
+.toast.show{transform:translateX(0)}
+.toast.error{background:#d63031}
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.35);z-index:100;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:#fff;border-radius:16px;padding:28px;width:360px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.12);text-align:center}
+.modal h2{font-size:16px;font-weight:700;margin-bottom:14px;color:#1a1a2e}
+.modal .face-preview{width:150px;height:150px;border-radius:10px;object-fit:cover;border:2px solid #e8ecf1;margin:0 auto 14px;display:block}
+.modal label{display:block;font-size:13px;color:#5a6478;margin-bottom:4px;text-align:left}
+.modal input{width:100%;padding:10px 12px;border:1.5px solid #e8ecf1;border-radius:8px;background:#fafbfc;color:#1a1a2e;font-size:14px;outline:none}
+.modal input:focus{border-color:#3a7bd5}
+.modal-actions{display:flex;gap:10px;margin-top:16px;justify-content:center}
+.modal-actions .btn{padding:10px 28px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;transition:transform .1s}
+.modal-actions .btn:hover{transform:translateY(-1px)}
+.modal-actions .btn.primary{background:linear-gradient(90deg,#3a7bd5,#00c9ff);color:#fff}
+.modal-actions .btn.secondary{background:#f0f2f5;color:#5a6478}
+.modal-actions .btn:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.sidebar{width:64px}.sidebar nav a span,.sidebar .logo p,.sidebar .logo h2,.sidebar .user-info span{display:none}.sidebar .logo{padding:14px}.sidebar nav a{justify-content:center;padding:12px}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar">
+<div class="logo"><h2>智能人脸</h2><p>Face Recognition</p></div>
+<nav>
+<a href="/dashboard" class="active"><span>实时监控</span></a>
+<a href="/agent"><span>AI 助手</span></a>
+<a href="/face_manage"><span>人脸管理</span></a>
+{% if role == 'admin' %}
+<a href="/user_manage"><span>用户管理</span></a>
+{% endif %}
+</nav>
+<div class="user-info">
+<span>{{ username }}</span>
+<a href="/logout">退出</a>
+</div>
+</aside>
+<div class="main">
+<h1>实时监控</h1>
+<div class="grid">
+<div class="video-section">
+<div class="video-wrapper"><img src="/video_feed" alt="摄像头画面"></div>
+</div>
+<div class="right-col">
+<div class="panel">
+<h3>实时状态</h3>
+<div class="stats">
+<div class="stat-card"><div class="num" id="fpsDisplay">0</div><div class="label">FPS</div></div>
+<div class="stat-card"><div class="num" id="faceCount">0</div><div class="label">检测人数</div></div>
+</div>
+</div>
+<div class="panel">
+<h3>人脸库 ({{ names|length }})</h3>
+<ul class="face-list" id="faceList">
+{% for name in names %}
+<li><span class="dot"></span>{{ name }}</li>
+{% endfor %}
+</ul>
+<div class="add-form">
+<input type="text" id="newName" placeholder="输入姓名">
+<button id="addBtn" onclick="addFace()">拍照添加</button>
+</div>
+</div>
+<div class="panel">
+<h3>操作</h3>
+<button onclick="saveLog()" style="width:100%;padding:11px;background:linear-gradient(90deg,#27ae60,#2ecc71);border:none;border-radius:8px;color:#fff;font-weight:600;cursor:pointer;font-size:13px">保存识别结果</button>
+<div id="saveMsg" style="text-align:center;margin-top:8px;font-size:12px;color:#8892a8"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="faceModal">
+<div class="modal">
+<h2>确认注册人脸</h2>
+<img class="face-preview" id="facePreview" src="" alt="预览">
+<label>姓名</label>
+<input type="text" id="modalName" placeholder="输入姓名">
+<div class="modal-actions">
+<button class="btn secondary" onclick="closeModal()">取消</button>
+<button class="btn primary" id="confirmBtn" onclick="confirmAdd()">确认注册</button>
+</div>
+</div>
+</div>
+
+<script>
+function showToast(m,e){const t=document.getElementById('toast');t.textContent=m;t.className='toast'+(e?' error':'');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000)}
+let pendingImage = '';
+function closeModal(){document.getElementById('faceModal').classList.remove('show');document.getElementById('confirmBtn').disabled=false;document.getElementById('confirmBtn').textContent='确认注册'}
+async function addFace(){
+const nameHint = document.getElementById('newName').value.trim();
+const btn=document.getElementById('addBtn');btn.disabled=true;btn.textContent='拍照中...';
+try{
+const r=await fetch('/api/faces/preview',{method:'POST'});const d=await r.json();
+if(d.success){
+document.getElementById('facePreview').src = d.image;
+document.getElementById('modalName').value = nameHint;
+pendingImage = d.image;
+document.getElementById('faceModal').classList.add('show');
+setTimeout(()=>document.getElementById('modalName').focus(),200);
+} else {showToast(d.error||'未检测到人脸',true)}
+}catch(e){showToast('网络错误',true)}
+btn.disabled=false;btn.textContent='拍照添加';
+}
+async function confirmAdd(){
+const name = document.getElementById('modalName').value.trim();
+if(!name){showToast('请输入姓名',true);return}
+const btn=document.getElementById('confirmBtn');btn.disabled=true;btn.textContent='注册中...';
+try{
+const r=await fetch('/api/faces',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,image_data:pendingImage})});
+const d=await r.json();
+if(d.success){showToast('已添加: '+name);closeModal();setTimeout(()=>location.reload(),500)}
+else{showToast(d.error||'添加失败',true);btn.disabled=false;btn.textContent='确认注册'}
+}catch(e){showToast('网络错误',true);btn.disabled=false;btn.textContent='确认注册'}
+}
+async function pollStats(){try{const r=await fetch('/api/stats');const d=await r.json();if(d.fps!=null)document.getElementById('fpsDisplay').textContent=d.fps;if(d.faces!=null)document.getElementById('faceCount').textContent=d.faces}catch(e){}setTimeout(pollStats,1000)}
+pollStats();
+async function saveLog(){
+const btn=event.target;btn.disabled=true;btn.textContent='保存中...';
+try{const r=await fetch('/api/log/save',{method:'POST'});const d=await r.json();
+document.getElementById('saveMsg').textContent=d.success?'已保存 '+d.saved+' 条':(d.message||'没有识别结果')}
+catch(e){document.getElementById('saveMsg').textContent='保存失败'}
+btn.disabled=false;btn.textContent='保存识别结果';
+}
+</script>
+</body>
+</html>

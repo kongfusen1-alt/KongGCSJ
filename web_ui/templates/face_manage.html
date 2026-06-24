@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智能人脸识别系统</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans SC',sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:230px;background:#fff;border-right:1px solid #e8ecf1;padding:0;display:flex;flex-direction:column}
+.sidebar .logo{padding:22px 24px 20px;border-bottom:1px solid #eef0f4}
+.sidebar .logo h2{font-size:15px;font-weight:700;color:#1a1a2e;letter-spacing:0.5px}
+.sidebar .logo p{font-size:11px;color:#8892a8;margin-top:3px}
+.sidebar nav{flex:1;padding:12px 10px}
+.sidebar nav a{display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:10px;color:#5a6478;text-decoration:none;font-size:14px;font-weight:500;transition:all .15s;margin-bottom:2px}
+.sidebar nav a:hover{background:#f5f6fa;color:#1a1a2e}
+.sidebar nav a.active{background:linear-gradient(90deg,rgba(58,123,213,0.08),rgba(0,201,255,0.08));color:#3a7bd5;font-weight:600}
+.sidebar .user-info{padding:16px 20px;border-top:1px solid #eef0f4;display:flex;align-items:center;justify-content:space-between}
+.sidebar .user-info span{font-size:13px;color:#5a6478}
+.sidebar .user-info a{color:#d63031;text-decoration:none;font-size:12px;font-weight:500}
+.main{flex:1;padding:28px 30px;overflow-y:auto}
+.main h1{font-size:20px;font-weight:700;margin-bottom:22px;color:#1a1a2e}
+.toolbar{display:flex;gap:12px;margin-bottom:18px;align-items:center}
+.toolbar input{flex:1;max-width:260px;padding:10px 12px;border:1.5px solid #e8ecf1;border-radius:8px;background:#fafbfc;color:#1a1a2e;font-size:13px;outline:none}
+.toolbar input:focus{border-color:#3a7bd5}
+.btn{padding:10px 20px;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;transition:transform .1s,opacity .2s}
+.btn-primary{background:linear-gradient(90deg,#3a7bd5,#00c9ff);color:#fff}
+.btn-danger{background:#d63031;color:#fff}
+.btn:hover{opacity:.9}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #eef0f4;box-shadow:0 1px 6px rgba(0,0,0,0.03)}
+th,td{padding:13px 16px;text-align:left;border-bottom:1px solid #f0f2f5}
+th{background:#f8f9fc;color:#5a6478;font-size:12px;font-weight:600;letter-spacing:0.5px}
+tr:hover td{background:#fafbfc}
+.face-img{width:38px;height:38px;border-radius:8px;object-fit:cover;border:1px solid #e8ecf1}
+.actions{display:flex;gap:8px}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;background:rgba(39,174,96,0.1);color:#27ae60;font-weight:500}
+.empty{text-align:center;padding:60px 20px;color:#b2bec3;font-size:14px}
+.toast{position:fixed;top:20px;right:20px;padding:14px 24px;border-radius:10px;background:#27ae60;color:#fff;font-weight:600;font-size:14px;transform:translateX(120%);transition:transform .3s ease;z-index:1000}
+.toast.show{transform:translateX(0)}
+.toast.error{background:#d63031}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar">
+<div class="logo"><h2>智能人脸</h2><p>Face Recognition</p></div>
+<nav>
+<a href="/dashboard"><span>实时监控</span></a>
+<a href="/agent"><span>AI 助手</span></a>
+<a href="/face_manage" class="active"><span>人脸管理</span></a>
+{% if role == 'admin' %}
+<a href="/user_manage"><span>用户管理</span></a>
+{% endif %}
+</nav>
+<div class="user-info">
+<span>{{ username }}</span>
+<a href="/logout">退出</a>
+</div>
+</aside>
+<div class="main">
+<h1>人脸管理</h1>
+<div class="toolbar">
+<input type="text" id="searchInput" placeholder="搜索姓名..." oninput="filterTable()">
+<button class="btn btn-primary" onclick="quickAdd()">拍照添加</button>
+</div>
+<table>
+<thead>
+<tr><th>ID</th><th>头像</th><th>姓名</th><th>添加时间</th><th>操作</th></tr>
+</thead>
+<tbody id="faceTable">
+{% for f in faces %}
+<tr data-name="{{ f.name|lower }}">
+<td style="color:#8892a8">{{ f.id }}</td>
+<td>{% if f.image_path %}<img class="face-img" src="/api/face_image/{{ f.id }}" alt="">{% else %}<span style="color:#b2bec3;font-size:12px">无</span>{% endif %}</td>
+<td><span class="badge">{{ f.name }}</span></td>
+<td style="color:#8892a8;font-size:12px">{{ f.created_at }}</td>
+<td class="actions"><button class="btn btn-danger" style="padding:6px 14px;font-size:12px" onclick="deleteFace({{ f.id }},'{{ f.name }}')">删除</button></td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% if not faces %}<div class="empty"><p>暂无人脸数据</p><p style="margin-top:6px;font-size:12px;color:#b2bec3">点击「拍照添加」开始录入</p></div>{% endif %}
+</div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+function showToast(m,e){const t=document.getElementById('toast');t.textContent=m;t.className='toast'+(e?' error':'');t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000)}
+function filterTable(){const q=document.getElementById('searchInput').value.toLowerCase();document.querySelectorAll('#faceTable tr').forEach(r=>{r.style.display=r.dataset.name.includes(q)?'':'none'})}
+async function quickAdd(){const name=prompt('请输入姓名:');if(!name||!name.trim())return;try{const r=await fetch('/api/faces',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.trim()})});const d=await r.json();if(d.success){showToast('已添加');setTimeout(()=>location.reload(),500)}else{showToast(d.error||'失败',true)}}catch(e){showToast('网络错误',true)}}
+async function deleteFace(id,name){if(!confirm('确认删除「'+name+'」？'))return;try{const r=await fetch('/api/faces/'+id,{method:'DELETE'});const d=await r.json();if(d.success){showToast('已删除');setTimeout(()=>location.reload(),500)}else{showToast(d.error||'删除失败',true)}}catch(e){showToast('网络错误',true)}}
+</script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智能人脸识别系统</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans SC',sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:230px;background:#fff;border-right:1px solid #e8ecf1;padding:0;display:flex;flex-direction:column;box-shadow:1px 0 8px rgba(0,0,0,0.02)}
+.sidebar .logo{padding:22px 24px 20px;border-bottom:1px solid #eef0f4}
+.sidebar .logo h2{font-size:15px;font-weight:700;color:#1a1a2e;letter-spacing:0.5px}
+.sidebar .logo p{font-size:11px;color:#8892a8;margin-top:3px}
+.sidebar nav{flex:1;padding:12px 10px}
+.sidebar nav a{display:flex;align-items:center;gap:10px;padding:11px 16px;border-radius:10px;color:#5a6478;text-decoration:none;font-size:14px;font-weight:500;transition:all .15s;margin-bottom:2px}
+.sidebar nav a:hover{background:#f5f6fa;color:#1a1a2e}
+.sidebar nav a.active{background:linear-gradient(90deg,rgba(58,123,213,0.08),rgba(0,201,255,0.08));color:#3a7bd5;font-weight:600}
+.sidebar .user-info{padding:16px 20px;border-top:1px solid #eef0f4;display:flex;align-items:center;justify-content:space-between}
+.sidebar .user-info span{font-size:13px;color:#5a6478}
+.sidebar .user-info a{color:#d63031;text-decoration:none;font-size:12px;font-weight:500}
+.sidebar .user-info a:hover{text-decoration:underline}
+.main{flex:1;display:flex;flex-direction:column;padding:28px 30px;overflow:hidden}
+.main h1{font-size:20px;font-weight:700;margin-bottom:20px;color:#1a1a2e;flex-shrink:0}
+.chat-layout{flex:1;display:grid;grid-template-columns:1fr 380px;gap:20px;overflow:hidden}
+.chat-container{display:flex;flex-direction:column;background:#fff;border-radius:14px;border:1px solid #eef0f4;overflow:hidden;box-shadow:0 1px 6px rgba(0,0,0,0.03)}
+.video-panel{display:flex;flex-direction:column;gap:14px}
+.video-section{background:#fff;border-radius:14px;padding:14px;border:1px solid #eef0f4;box-shadow:0 1px 6px rgba(0,0,0,0.03)}
+.video-section h3{font-size:12px;font-weight:600;color:#8892a8;margin-bottom:10px;letter-spacing:0.8px;text-transform:uppercase}
+.video-wrapper{width:100%;aspect-ratio:16/9;background:#0a0a12;border-radius:10px;overflow:hidden}
+.video-wrapper img{width:100%;height:100%;object-fit:contain}
+@media(max-width:1100px){.chat-layout{grid-template-columns:1fr}}
+.chat-messages{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:14px}
+.msg{max-width:78%;padding:12px 18px;border-radius:14px;font-size:14px;line-height:1.6;word-break:break-word;white-space:pre-wrap}
+.msg.user{align-self:flex-end;background:linear-gradient(90deg,#3a7bd5,#00c9ff);color:#fff;border-bottom-right-radius:4px}
+.msg.assistant{align-self:flex-start;background:#f5f6fa;color:#1a1a2e;border-bottom-left-radius:4px}
+.msg.assistant pre{background:#e8ecf1;padding:12px;border-radius:8px;margin:8px 0;overflow-x:auto;font-size:13px}
+.msg.assistant table{border-collapse:collapse;margin:8px 0;width:100%;font-size:13px}
+.msg.assistant th,.msg.assistant td{border:1px solid #dfe6e9;padding:6px 10px;text-align:left}
+.msg.assistant th{background:#f0f2f5}
+.msg.system{align-self:center;background:#f0f2f5;color:#8892a8;font-size:12px;padding:6px 16px;border-radius:20px}
+.msg .loading{display:inline-block;width:14px;height:14px;border:2px solid rgba(58,123,213,0.2);border-top-color:#3a7bd5;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.chat-input-area{display:flex;flex-direction:column;gap:0;border-top:1px solid #eef0f4}
+.quick-btns{display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px 8px;background:#fafbfc}
+.quick-btn{padding:6px 14px;background:#fff;border:1px solid #e8ecf1;border-radius:20px;color:#5a6478;font-size:12px;cursor:pointer;transition:all .15s}
+.quick-btn:hover{background:#3a7bd5;color:#fff;border-color:#3a7bd5}
+.chat-input{display:flex;gap:10px;padding:14px 16px}
+.chat-input input{flex:1;padding:11px 14px;border:1.5px solid #e8ecf1;border-radius:10px;background:#fafbfc;color:#1a1a2e;font-size:14px;outline:none;transition:border-color .2s}
+.chat-input input:focus{border-color:#3a7bd5}
+.chat-input input::placeholder{color:#b2bec3}
+.chat-input button{padding:11px 24px;background:linear-gradient(90deg,#3a7bd5,#00c9ff);border:none;border-radius:10px;color:#fff;font-weight:600;cursor:pointer;font-size:14px;transition:transform .15s,opacity .2s}
+.chat-input button:hover{opacity:.9}
+.chat-input button:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:900px){.sidebar{width:64px}.sidebar nav a span,.sidebar .logo p,.sidebar .logo h2,.sidebar .user-info span{display:none}.sidebar .logo{padding:14px}.sidebar nav a{justify-content:center;padding:12px}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar">
+<div class="logo"><h2>智能人脸</h2><p>Face Recognition</p></div>
+<nav>
+<a href="/dashboard"><span>实时监控</span></a>
+<a href="/agent" class="active"><span>AI 助手</span></a>
+<a href="/face_manage"><span>人脸管理</span></a>
+{% if role == 'admin' %}
+<a href="/user_manage"><span>用户管理</span></a>
+{% endif %}
+</nav>
+<div class="user-info">
+<span>{{ username }}</span>
+<a href="/logout">退出</a>
+</div>
+</aside>
+<div class="main">
+<h1>AI 助手</h1>
+<div class="chat-layout">
+<div class="chat-container">
+<div class="chat-messages" id="chatMessages">
+<div class="msg system">你可以用自然语言查询和操控系统</div>
+</div>
+<div class="chat-input-area">
+<div class="quick-btns">
+<span class="quick-btn" onclick="ask('今天谁来过')">今天谁来过</span>
+<span class="quick-btn" onclick="ask('数据库里有谁')">数据库里有谁</span>
+<span class="quick-btn" onclick="ask('系统正常吗')">系统正常吗</span>
+<span class="quick-btn" onclick="ask('现在有几个人')">有几个人</span>
+</div>
+<div class="chat-input">
+<input type="text" id="msgInput" placeholder="输入消息..." onkeydown="if(event.key==='Enter')send()">
+<button id="sendBtn" onclick="send()">发送</button>
+</div>
+</div>
+</div>
+<div class="video-panel">
+<div class="video-section">
+<h3>实时画面</h3>
+<div class="video-wrapper"><img src="/video_feed" alt="摄像头"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+const chatBox = document.getElementById('chatMessages');
+const input = document.getElementById('msgInput');
+const sendBtn = document.getElementById('sendBtn');
+function addMsg(text, role) {
+const div = document.createElement('div');div.className='msg '+role;
+div.innerHTML = text;chatBox.appendChild(div);chatBox.scrollTop = chatBox.scrollHeight;
+return div;
+}
+function formatReply(text) {
+text = text.replace(/```([\s\S]*?)```/g,'<pre>$1</pre>');
+text = text.replace(/`([^`]+)`/g,'<code>$1</code>');
+text = text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+text = text.replace(/\n/g,'<br>');return text;
+}
+function ask(q){input.value=q;send()}
+async function send(){
+const msg=input.value.trim();if(!msg)return;
+input.value='';sendBtn.disabled=true;
+addMsg(msg,'user');
+const ld=addMsg('<span class="loading"></span>','assistant');
+try{
+const r=await fetch('/api/agent/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+const d=await r.json();ld.innerHTML=formatReply(d.reply||d.error||'无回复');
+}catch(e){ld.innerHTML='网络错误'}
+sendBtn.disabled=false;input.focus();
+}
+</script>
+</body>
+</html>
